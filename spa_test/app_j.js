@@ -24,7 +24,7 @@ $(document).ready(function() {
     navigateTo('home');
 
     function navigateTo(pageId) {
-        // 페이지 파일 경로 설정 (예: pages 폴더에 각 페이지의 HTML 파일이 위치한다고 가정)
+        // 페이지 파일 경로 설정 (예: pages 폴더에 각 페이지의 HTML 파일이 위치한다고 가정)..
         const pageFilePath = `pages/${pageId}.html`;
 
         // jQuery를 사용하여 페이지 내용 로드
