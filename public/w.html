@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>테스트넷 전송기</title>
+  <script src="https://unpkg.com/xrpl@2.6.0/build/xrpl-latest-min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <style>
+    .tab { display: none; }
+    .tab.active { display: block; }
+    .tab-button { margin: 5px; padding: 5px 10px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>테스트넷 전송기</h2>
+
+  <div>
+    <button class="tab-button" onclick="showTab('xrp')">XRP</button>
+    <button class="tab-button" onclick="showTab('usdt')">USDT 전송</button>
+    <button class="tab-button" onclick="showTab('deploy')">USDT 배포</button>
+  </div>
+
+  <!-- XRP 탭 -->
+  <div id="xrp" class="tab active">
+    <h3>XRP 테스트넷 전송</h3>
+    <label>시크릿 키인지 뭔지 난 몰라 그냥 지갑생성하니까 잇엇음ㅋ</label><br />
+    <input type="text" id="secret" size="60"><br><br>
+    <label>받는 놈 주소</label><br />
+    <input type="text" id="destination" size="60"><br><br>
+    <label>태그는 꼭 넣어라~~</label><br />
+    <input type="number" id="destinationTag"><br><br>
+    <label>보낼 금액</label><br />
+    <input type="text" id="amount"><br><br>
+    <button onclick="sendXRP()">전송 가즈아!!</button>
+    <pre id="log"></pre>
+  </div>
+
+  <!-- USDT 전송 탭 -->
+  <div id="usdt" class="tab">
+    <h3>USDT (ERC20) 전송</h3>
+    <label>토큰 주소</label><br />
+    <input type="text" id="tokenAddress" size="60"><br><br>
+    <label>받는 주소</label><br />
+    <input type="text" id="usdtTo" size="60"><br><br>
+    <label>보낼 금액 (USDT)</label><br />
+    <input type="text" id="usdtAmount"><br><br>
+    <button onclick="sendUSDT()">USDT 전송</button>
+    <pre id="usdtLog"></pre>
+  </div>
+
+  <!-- USDT 배포 탭 -->
+  <div id="deploy" class="tab">
+    <h3>USDT 컨트랙트 배포</h3>
+    <p>배포하면 현재 연결된 메타마스크 계정에 1000 USDT가 자동으로 발행됩니다.</p>
+    <button onclick="deployUSDT()">배포하기</button>
+    <pre id="deployLog"></pre>
+  </div>
+
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+      document.getElementById(id).classList.add('active')
+    }
+
+    // XRP 전송
+    const client = new xrpl.Client("wss://s.altnet.rippletest.net:51233")
+    async function sendXRP() {
+      const secret = document.getElementById("secret").value.trim()
+      const destination = document.getElementById("destination").value.trim()
+      const destinationTag = parseInt(document.getElementById("destinationTag").value.trim())
+      const amount = document.getElementById("amount").value.trim()
+      const log = document.getElementById("log")
+      log.textContent = "[연결 중...]"
+      try {
+        await client.connect()
+        const wallet = xrpl.Wallet.fromSeed(secret)
+        log.textContent += `\n[지갑 주소] ${wallet.address}`
+        const tx = await client.autofill({
+          TransactionType: "Payment",
+          Account: wallet.address,
+          Amount: xrpl.xrpToDrops(amount),
+          Destination: destination,
+          DestinationTag: destinationTag
+        })
+        const signed = wallet.sign(tx)
+        const result = await client.submitAndWait(signed.tx_blob)
+        log.textContent += "\n[전송 결과]\n" + JSON.stringify(result.result, null, 2)
+      } catch (e) {
+        log.textContent += "\n[오류 발생] " + e.message
+      } finally {
+        client.disconnect()
+      }
+    }
+
+    // USDT 전송
+    async function sendUSDT() {
+      const log = document.getElementById("usdtLog")
+      const tokenAddress = document.getElementById("tokenAddress").value.trim()
+      const to = document.getElementById("usdtTo").value.trim()
+      const amount = document.getElementById("usdtAmount").value.trim()
+      if (!window.ethereum) return log.textContent = "MetaMask가 필요합니다."
+
+      const web3 = new Web3(window.ethereum)
+      await window.ethereum.request({ method: "eth_requestAccounts" })
+      const accounts = await web3.eth.getAccounts()
+      const token = new web3.eth.Contract([
+        {
+          "constant": false,
+          "inputs": [
+            { "name": "_to", "type": "address" },
+            { "name": "_value", "type": "uint256" }
+          ],
+          "name": "transfer",
+          "outputs": [{ "name": "", "type": "bool" }],
+          "type": "function"
+        }
+      ], tokenAddress)
+
+      try {
+        const value = web3.utils.toWei(amount, "ether")
+        const receipt = await token.methods.transfer(to, value).send({ from: accounts[0] })
+        log.textContent = "전송 완료!\n" + JSON.stringify(receipt, null, 2)
+      } catch (err) {
+        log.textContent = "오류: " + err.message
+      }
+    }
+
+    // USDT 배포
+    async function deployUSDT() {
+    const log = document.getElementById("deployLog")
+    if (!window.ethereum) return log.textContent = "MetaMask가 필요합니다."
+
+    const web3 = new Web3(window.ethereum)
+    await window.ethereum.request({ method: "eth_requestAccounts" })
+    const accounts = await web3.eth.getAccounts()
+
+    const abi = [
+      {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+      },
+      {
+        "inputs": [],
+        "name": "name",
+        "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "symbol",
+        "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "to", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }],
+        "name": "transfer",
+        "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+        "name": "balanceOf",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+      }
+    ]
+
+    const bytecode = "0x608060405234801561001057600080fd5b5060405161041c38038061041c8339818101604052602081101561003357600080fd5b505160005560b2806100436000396000f3fe60806040526004361061003f5760003560e01c806370a082311461004457806395d89b411461006e578063a9059cbb14610098578063dd62ed3e146100c2575b600080fd5b61005a600480360381019061005591906101d0565b6100ec565b604051610067919061027d565b60405180910390f35b610086600480360381019061008191906101f4565b610122565b604051610093919061028d565b60405180910390f35b6100ae60048036038101906100a991906101f4565b610139565b6040516100bb919061027d565b60405180910390f35b6100dc60048036038101906100d791906101f4565b6101ae565b6040516100e9919061028d565b60405180910390f35b60008054905090565b6000809054906101000a900460ff1681565b60015481565b60016020528060005260406000206000915090505481565b6001600054016000819055507f4e487b71000000000000000000000000000000000000000000000000000000008152601a0190565b6000819050919050565b61015481610141565b82525050565b600060208201905061016f600083018461014b565b92915050565b60008115159050919050565b61018a81610141565b811461019557600080fd5b50565b6000813590506101a781610181565b92915050565b6000602082840312156101c3576101c261017c565b5b60006101d184828501610198565b91505092915050565b6101e381610141565b82525050565b60006020820190506101fe60008301846101da565b92915050565b600061021082610181565b915061021b83610181565b9250827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff038211156102505761024f61017c565b5b82820190509291505056fea2646970667358221220f0b72a6c8a6dd655d83a86e2e4b5d0cf4972b6d88ebcb679e4d8fd58aa30135f64736f6c634300080f0033"
+
+    const contract = new web3.eth.Contract(abi)
+    log.textContent = "배포 중..."
+
+    try {
+      const deployed = await contract.deploy({ data: bytecode }).send({ from: accounts[0] })
+      log.textContent = "배포 완료! 주소: " + deployed.options.address
+    } catch (err) {
+      log.textContent = "배포 실패: " + err.message
+    }
+  }
+</script>
+</body>
+</html>
