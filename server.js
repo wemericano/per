@@ -18,6 +18,6 @@ app.listen(PORT, () => {
 
 /*
 git add .
-git commit -m "최종 서버 수정"
-git push origin main
+git commit -m "커밋 메시지 쓰든지말든지"
+git push origin mai지
 */
