@@ -28,6 +28,23 @@
         .animate-fade-in-up {
             animation: fadeInUp 0.8s ease-out both;
         }
+        .clickBtn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            padding: 10px 20px;
+            background-image: url('./image/photo.jpg');
+            background-repeat: no-repeat;
+            background-size: cover;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
     </style>
 </head>
 <body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-sans">
@@ -152,7 +169,7 @@
         </div>
     </div>
 
-    <button onclick="location.href='/w.html'">w.html로 이동</button>
+    <button class="clickBtn" onclick="location.href='/w.html'">w.html로 이동</button>
 
 
     <!-- 리자몽 이미지 -->
