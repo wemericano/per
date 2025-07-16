@@ -1,4 +1,6 @@
 const express = require('express');
+require('dotenv').config();
+
 const fs = require('fs');
 const ini = require('ini');
 
@@ -6,8 +8,10 @@ const router = express.Router();
 
 router.post('/', async (req, res) => {
     try {
-        const config = ini.parse(fs.readFileSync('./public/common/conf.ini', 'utf-8'));
-        const apiKey = config.gpt.api_key;
+        //const config = ini.parse(fs.readFileSync('./public/common/conf.ini', 'utf-8'));
+        //const apiKey = config.gpt.api_key;
+        const apiKey = process.env.OPENAI_API_KEY;
+
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
